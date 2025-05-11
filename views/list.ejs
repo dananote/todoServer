@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Document</title>
+    <link href="/main.css" rel="stylesheet" />
+  </head>
+  <body class="grey-bg">
+    <%- include('nab.ejs') %>
+
+    <div class="white-bg">
+      <% for(let i = 0; i < posts.length; i++) { %>
+      <div class="list-box">
+        <h4 onclick="gotoDetail(<%= JSON.stringify(posts[i]._id)%>)">
+          <%= posts[i].title%>
+        </h4>
+        <p><%= posts[i].content%></p>
+        <button onclick="gotoUpdate(<%= JSON.stringify(posts[i]._id)%>)">
+          수정
+        </button>
+      </div>
+      <% } %>
+    </div>
+
+    <button onclick="gotoAdd()">Add Memo</button>
+
+    <script>
+      const gotoAdd = () => {
+        location.href = "/add";
+      };
+
+      const gotoDetail = (id) => {
+        location.href = "/detail/" + id;
+      };
+      const gotoUpdate = (id) => {
+        location.href = "/update/" + id;
+      };
+    </script>
+  </body>
+</html>

@@ -7,9 +7,13 @@ require('dotenv').config();
 // __dirname은 현재 실행중인 파일의 경로를 의미
 app.use(express.static(__dirname + '/public'))
 console.log(process.env.MONGO_DB_URL)
+// ejs 템플릿 엔진 사용
+app.set('view engine', 'ejs');
+app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
 
 // mongoDB 연결
-const { MongoClient } = require('mongodb');
+const { MongoClient, ObjectId } = require('mongodb');
 
 let db;
 // url의 아이디:비밀번호로 사이에 잘 입력
@@ -30,26 +34,108 @@ app.listen(8080, function () {
   console.log('Server is running on port 8080');
 })
 
-// 목록 정적 파일 제공
 app.get('/', function (req, res) {
   res.sendFile(__dirname + '/index.html');
 })
 
+/**
+ * 목록
+ */
+// 목록 페이지 제공
 app.get('/list', async (req, res) => {
   const result = await db.collection('post').find().toArray()
 
-  console.log(result);
-  res.send('목록 list')
+  res.render('list.ejs', { posts: result });
 })
 
-app.get('/list/:id', function (req, res) {
-  res.send('상세보기 list id : ' + req.params.id)
+/**
+ * 상세
+ */
+// 상세 페이지 제공
+app.get('/detail/:id', async (req, res) => {
+  const id = new ObjectId(req.params.id)
+  try {
+    const result = await db.collection('post').findOne({ _id: id })
+
+    if (!result) {
+      // 맞는 id가 없을 경우
+      return res.status(404).send('Not Found');
+    }
+    res.render('detail.ejs', { post: result });
+
+  } catch (error) {
+    console.error('Error fetching document:', error);
+    res.status(404).send('Not Found');
+  };
 })
 
-app.post('/add', function (req, res) {
+/**
+ * 추가
+ */
+// 게시물 추가 페이지 제공
+app.get('/add', (req, res) => {
+  res.render('add.ejs')
+})
 
-  // db.collection('collection이름')
-  db.collection('post').insertOne({ test: 'test' }).then(() => {
-    console.log('데이터 추가 성공');
-  })
+// 게시물 생성
+app.post('/add', async (req, res) => {
+  const { title, content } = req.body;
+
+  try {
+    if (title && content) {
+      await db.collection('post').insertOne({ title, content });
+      res.redirect('/list');
+    } else {
+      // 클라이언트 에러
+      res.status(400).send('Bad Request');
+    }
+  } catch (error) {
+    console.error('Error inserting document:', error);
+    // 서버 에러
+    res.status(500).send('Internal Server Error');
+  }
+})
+
+/**
+ * 수정
+ */
+// 게시물 수정 페이지 제공
+app.get('/update/:id', async (req, res) => {
+  const id = new ObjectId(req.params.id)
+
+  try {
+    const result = await db.collection('post').findOne({ _id: id })
+    if (!result) {
+      // 맞는 id가 없을 경우
+      return res.status(404).send('Not Found');
+    }
+    res.render('update.ejs', { post: result });
+  } catch (error) {
+    console.error('Error fetching document:', error);
+    res.status(404).send('Not Found');
+  }
+})
+
+app.post('/update/:id', async (req, res) => {
+  console.log(req.params)
+  const { title, content } = req.body;
+  const id = new ObjectId(req.params.id)
+
+  console.log(id, title, content)
+  if (title && content) {
+
+    try {
+      await db.collection('post').updateOne({ _id: id }, {
+        $set: { title, content }
+      })
+      res.redirect('/list');
+    } catch (error) {
+      console.error('Error updating document:', error);
+      // 서버 에러
+      res.status(500).send('Internal Server Error');
+    }
+  } else {
+    // 클라이언트 에러
+    res.status(400).send('Bad Request');
+  }
 })
